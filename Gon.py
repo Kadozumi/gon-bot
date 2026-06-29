@@ -1,70 +1,48 @@
 import discord
-from discord.ext import commands
-import aiohttp
+import requests
 import os
-import asyncio
-from dotenv import load_dotenv
-from aiohttp import web
 
-# 環境変数の読み込み
-load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
-DIFY_API_KEY = os.getenv("DIFY_API_KEY")
-DIFY_API_URL = "https://api.dify.ai/v1/chat-messages"
-
+# Discordのクライアント設定
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+client = discord.Client(intents=intents)
 
-conversations = {}
-processing_messages = set()
+# 環境変数からAPIキーなどを取得
+DIFY_API_KEY = os.environ.get('DIFY_API_KEY')
+DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
 
-# --- 追加部分：Webサーバー機能 ---
-async def handle(request):
-    return web.Response(text="Gon is running!")
-
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get('/', handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', int(os.environ.get('PORT', 8080)))
-    await site.start()
-
-# --- Discord Botの処理 ---
-@bot.event
+@client.event
 async def on_ready():
-    print(f"{bot.user} としてログインしました")
+    print(f'ログインしました: {client.user}')
 
-@bot.event
+@client.event
 async def on_message(message):
-    if message.author.bot:
+    # 1. ゴン自身の発言には反応しない（無限ループ防止）
+    if message.author == client.user:
         return
-    if message.id in processing_messages:
-        return
-    processing_messages.add(message.id)
 
-    try:
-        user_id = str(message.author.id)
-        conversation_id = conversations.get(user_id, "")
-        headers = {"Authorization": f"Bearer {DIFY_API_KEY}", "Content-Type": "application/json"}
-        payload = {"inputs": {}, "query": message.content, "response_mode": "blocking", "user": user_id, "conversation_id": conversation_id}
+    # 2. メッセージの中に「ゴン」という名前が含まれているか確認
+    if "ゴン" in message.content:
+        
+        # Difyへ送信する処理
+        api_url = "https://api.dify.ai/v1/chat-messages"
+        headers = {"Authorization": f"Bearer {DIFY_API_KEY}"}
+        payload = {
+            "inputs": {},
+            "query": message.content,
+            "response_mode": "blocking",
+            "conversation_id": "discord-user-" + str(message.author.id),
+            "user": str(message.author.id)
+        }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(DIFY_API_URL, json=payload, headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    answer = data.get("answer", "")
-                    if "conversation_id" in data:
-                        conversations[user_id] = data["conversation_id"]
-                    if answer:
-                        await message.channel.send(answer)
-    finally:
-        processing_messages.discard(message.id)
+        try:
+            response = requests.post(api_url, headers=headers, json=payload)
+            data = response.json()
+            reply = data.get("answer", "ごめん、うまく返事ができないみたい。")
+            await message.channel.send(reply)
+        except Exception as e:
+            print(f"エラー発生: {e}")
+            await message.channel.send("通信エラーが発生しました。")
 
-# --- 起動処理 ---
-async def main():
-    await asyncio.gather(bot.start(TOKEN), start_web_server())
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# ボットの起動
+client.run(DISCORD_TOKEN)
