@@ -2,12 +2,10 @@ import discord
 import requests
 import os
 
-# Discordのクライアント設定
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
-# 環境変数からAPIキーなどを取得
 DIFY_API_KEY = os.environ.get('DIFY_API_KEY')
 DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
 
@@ -17,14 +15,11 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    # 1. ゴン自身の発言には反応しない（無限ループ防止）
     if message.author == client.user:
         return
 
-    # 2. メッセージの中に「ゴン」という名前が含まれているか確認
+    # ここから下が「ゴン」と呼んだ時の判定です
     if "ゴン" in message.content:
-        
-        # Difyへ送信する処理
         api_url = "https://api.dify.ai/v1/chat-messages"
         headers = {"Authorization": f"Bearer {DIFY_API_KEY}"}
         payload = {
@@ -44,5 +39,4 @@ async def on_message(message):
             print(f"エラー発生: {e}")
             await message.channel.send("通信エラーが発生しました。")
 
-# ボットの起動
 client.run(DISCORD_TOKEN)
