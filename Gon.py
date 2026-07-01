@@ -4,10 +4,12 @@ import os
 import threading
 from flask import Flask
 
+# Discordのクライアント設定
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
+# 環境変数の読み込み
 DIFY_API_KEY = os.environ.get('DIFY_API_KEY')
 DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
 
@@ -17,13 +19,14 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    # 自分の発言を無視
     if message.author == client.user:
         return
 
-    # ここから下が「ゴン」と呼んだ時の判定です
+    # 「ゴン」が含まれるか判定
     if "ゴン" in message.content:
         api_url = "https://api.dify.ai/v1/chat-messages"
-        headers = {"Authorization": f"Bearer {DIFY_API_KEY}"}
+        headers = {"Authorization": f"Bearer {DIFY_API_KEY}", "Content-Type": "application/json"}
         payload = {
             "inputs": {},
             "query": message.content,
@@ -34,31 +37,34 @@ async def on_message(message):
 
         try:
             response = requests.post(api_url, headers=headers, json=payload)
-            # ここを追加：Difyからの応答内容をログに出力する
-            print(f"Dify Response Status: {response.status_code}")
-            print(f"Dify Response Data: {response.text}")
-            
             data = response.json()
-            reply = data.get("answer", "ごめん、答えが見つからなかったよ。")
+            
+            # ログにデバッグ情報を出す
+            print(f"Dify Response: {data}")
+
+            # 回答を取得
+            reply = data.get("answer")
+            if not reply:
+                reply = "ごめん、うまく言葉にできないみたい。"
+            
             await message.channel.send(reply)
+            
         except Exception as e:
-            # ここでエラーの詳細をログに出す
-            print(f"詳細エラー: {e}")
+            print(f"エラー発生: {e}")
             await message.channel.send("通信エラーが発生しました。")
 
-# ダミーのWebサーバーを立てる（Render対策）
+# Webサーバー（Render対策）
 app = Flask(__name__)
 @app.route('/')
 def home():
     return "Gon is running!"
 
 def run_web():
-    # Renderが指定するポート番号を取得（デフォルトは10000）
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
 
-# Webサーバーを別スレッドで起動
-threading.Thread(target=run_web).start()
-
-# Botの起動
-client.run(DISCORD_TOKEN)
+if __name__ == "__main__":
+    # Webサーバーを別スレッドで起動
+    threading.Thread(target=run_web, daemon=True).start()
+    # Botの起動
+    client.run(DISCORD_TOKEN)
