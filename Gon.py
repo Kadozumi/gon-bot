@@ -34,11 +34,16 @@ async def on_message(message):
 
         try:
             response = requests.post(api_url, headers=headers, json=payload)
+            # ここを追加：Difyからの応答内容をログに出力する
+            print(f"Dify Response Status: {response.status_code}")
+            print(f"Dify Response Data: {response.text}")
+            
             data = response.json()
-            reply = data.get("answer", "ごめん、うまく返事ができないみたい。")
+            reply = data.get("answer", "ごめん、答えが見つからなかったよ。")
             await message.channel.send(reply)
         except Exception as e:
-            print(f"エラー発生: {e}")
+            # ここでエラーの詳細をログに出す
+            print(f"詳細エラー: {e}")
             await message.channel.send("通信エラーが発生しました。")
 
 # ダミーのWebサーバーを立てる（Render対策）
