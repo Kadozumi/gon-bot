@@ -1,6 +1,8 @@
 import discord
 import requests
 import os
+import threading
+from flask import Flask
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -39,4 +41,19 @@ async def on_message(message):
             print(f"エラー発生: {e}")
             await message.channel.send("通信エラーが発生しました。")
 
+# ダミーのWebサーバーを立てる（Render対策）
+app = Flask(__name__)
+@app.route('/')
+def home():
+    return "Gon is running!"
+
+def run_web():
+    # Renderが指定するポート番号を取得（デフォルトは10000）
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
+
+# Webサーバーを別スレッドで起動
+threading.Thread(target=run_web).start()
+
+# Botの起動
 client.run(DISCORD_TOKEN)
