@@ -19,12 +19,16 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    # 自分の発言を無視
+    # どんなメッセージでも、まずは確実にログを出す
+    print(f"DEBUG: メッセージを受信しました: {message.content} (送信者: {message.author})")
+    
     if message.author == client.user:
         return
 
     # 「ゴン」が含まれるか判定
     if "ゴン" in message.content:
+        print("DEBUG: 「ゴン」という言葉を検知しました！")
+        # ... (以下、Difyへの通信処理) ...
         api_url = "https://api.dify.ai/v1/chat-messages"
         headers = {"Authorization": f"Bearer {DIFY_API_KEY}", "Content-Type": "application/json"}
         payload = {
