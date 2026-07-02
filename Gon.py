@@ -72,3 +72,6 @@ if __name__ == "__main__":
     threading.Thread(target=run_web, daemon=True).start()
     # Botの起動
     client.run(DISCORD_TOKEN)
+
+# ファイルの最後にこれを追加
+print("【重要】Gon.pyの最後尾まで読み込み完了しました")
