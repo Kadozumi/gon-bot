@@ -19,14 +19,29 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    # どんなメッセージでも、まずは確実にログを出す
-    print(f"DEBUG: メッセージを受信しました: {message.content} (送信者: {message.author})")
-    
+    # 1. Bot自身のメッセージは無視
     if message.author == client.user:
         return
 
+    # 2. チャンネル制限（#ラウンジのみ）
+    if message.channel.name != "ラウンジ":
+        return
+
+    # 3. ロール制限（メンバーロール保持者のみ）
+    role_names = [role.name for role in message.author.roles]
+    if "メンバー" not in role_names:
+        return
+
+    # 4. 反応する条件：
+    #   A: メッセージに「ゴン」が含まれる
+    #   B: メッセージが「ゴン（Bot）」への返信である
+    is_reply_to_gon = False
+    if message.reference and message.reference.resolved:
+        if message.reference.resolved.author == client.user:
+            is_reply_to_gon = True
+
     # 「ゴン」が含まれるか判定
-    if "ゴン" in message.content:
+    if "ゴン" in message.content or is_reply_to_gon:
         print("DEBUG: 「ゴン」という言葉を検知しました！")
         # ... (以下、Difyへの通信処理) ...
         api_url = "https://api.dify.ai/v1/chat-messages"
